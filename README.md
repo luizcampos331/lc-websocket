@@ -7,7 +7,7 @@
   <a href="#dart-objective">Objective</a> |
   <a href="#gear-requirements">Requirements</a> |
   <a href="#package-download-the-project">Download</a> |
-  <a href="#package-starting-the-project">Start</a> |
+  <a href="#checkered_flag-starting-the-project">Start</a> |
   <a href="#bust_in_silhouette-author">Author</a> |
   <a href="#pencil-License">License</a>
 </p>
@@ -36,7 +36,7 @@ Using your terminal, choose a location for the project and run the commands:
 
 ```
 
-## :package: Starting the project
+## :checkered_flag: Starting the project
 Using your terminal, run the commands:
 ```bash
   # Install the dependencies
