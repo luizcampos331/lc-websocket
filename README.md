@@ -7,6 +7,7 @@
   <a href="#dart-objective">Objective</a> |
   <a href="#gear-requirements">Requirements</a> |
   <a href="#package-download-the-project">Download</a> |
+  <a href="#package-starting-the-project">Start</a> |
   <a href="#bust_in_silhouette-author">Author</a> |
   <a href="#pencil-License">License</a>
 </p>
@@ -31,10 +32,24 @@ Using your terminal, choose a location for the project and run the commands:
   $ git clone https://github.com/luizcampos331/lc-websocket.git
 
   # Access the project folder
-  $ cd gobarber-backend.git
+  $ cd lc-websocket.git
 
+```
+
+## :package: Starting the project
+Using your terminal, run the commands:
+```bash
   # Install the dependencies
   $ npm ci
+
+  # Run server
+  $ npm run dev:server
+
+  # Build server
+  $ npm run build:server
+
+  # Run server in JavaScript
+  $ npm run start:server
 
 ```
 
