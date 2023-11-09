@@ -4,7 +4,7 @@
   "description": "API to demonstrate the WebSocket protocol from scratch",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev:server": "ts-node-dev -r tsconfig-paths/register --exit-child --inspect --transpile-only --ignore-watch node_modules --respawn server/src/server.ts"
   },
   "repository": {
     "type": "git",
@@ -17,7 +17,11 @@
     "url": "https://github.com/luizcampos331/lc-websocket/issues"
   },
   "homepage": "https://github.com/luizcampos331/lc-websocket#readme",
+  "dependencies": {
+    "dotenv": "16.3.1"
+  },
   "devDependencies": {
+    "@types/node": "20.9.0",
     "@typescript-eslint/eslint-plugin": "6.10.0",
     "@typescript-eslint/parser": "6.10.0",
     "eslint": "8.53.0",
@@ -26,6 +30,7 @@
     "eslint-plugin-import": "2.29.0",
     "eslint-plugin-import-helpers": "1.3.1",
     "eslint-plugin-prettier": "5.0.1",
+    "ts-node-dev": "2.0.0",
     "typescript": "5.2.2"
   }
 }
