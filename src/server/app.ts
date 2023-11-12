@@ -1,7 +1,11 @@
 import 'dotenv/config';
 import { createServer } from 'http';
 
+import WebSocketHandler from './web-socket-handler';
+
 function configureServer() {
+  const webSocketHandler = new WebSocketHandler();
+
   const server = createServer((request, response) => {
     try {
       if (request.url === '/') {
@@ -19,6 +23,8 @@ function configureServer() {
       return;
     }
   });
+
+  server.on('upgrade', webSocketHandler.upgrade);
 
   return server;
 }

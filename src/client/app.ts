@@ -8,6 +8,7 @@ function configureServer() {
     try {
       const indexPath = await getPath('client/public/index.html');
       const stylesPath = await getPath('client/public/styles.css');
+      const scriptsPath = await getPath('client/public/scripts.js');
 
       switch (request.url) {
         case '/':
@@ -31,6 +32,18 @@ function configureServer() {
 
             response.writeHead(200, { 'Content-Type': 'text/css' });
             response.end(data);
+          });
+
+          break;
+        case '/scripts.js':
+          readFile(scriptsPath, 'utf8', (error, data) => {
+            if (error) {
+              console.error(error);
+              throw new Error(error.message);
+            }
+
+            response.writeHead(200, { 'Content-Type': 'text/js' });
+            response.end(data.replace('_SERVER_URL_', process.env.SERVER_URL));
           });
 
           break;

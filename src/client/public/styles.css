@@ -36,7 +36,7 @@ main {
   flex-direction: column;
   gap: 10px;
 
-  .messages {
+  #messages {
     display: flex;
     flex-direction: column;
     gap: 20px;
