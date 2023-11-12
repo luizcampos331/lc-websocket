@@ -37,19 +37,35 @@ Using your terminal, choose a location for the project and run the commands:
 ```
 
 ## :checkered_flag: Starting the project
-Using your terminal, run the commands:
-```bash
-  # Install the dependencies
-  $ npm ci
+Using your terminal
 
-  # Run server
+Install the dependencies
+```bash
+  $ npm ci
+```
+
+Run the commands to use SERVER:
+```bash
+  # Run
   $ npm run dev:server
 
-  # Build server
+  # Build
   $ npm run build:server
 
-  # Run server in JavaScript
+  # Run build
   $ npm run start:server
+```
+
+Run the commands to use CLIENT:
+```bash
+  # Run
+  $ npm run dev:client
+
+  # Build
+  $ npm run build:client
+
+  # Run build
+  $ npm run start:client
 
 ```
 
