@@ -6,6 +6,8 @@ const SEVEN_BITS_INTEGER_MARKER = 125;
 const SIXTEEN_BITS_INTEGER_MARKER = 126;
 const MASK_KEY_BYTES_LENGTH = 4;
 const FIRST_BIT = 128; // parseInt('10000000', 2)
+const MAXIMUM_SIXTEEN_BITS_INTEGER = 2 ** 16; // 0 to 65536
+const OPCODE_TEXT = 0x01; // 1 bit in binary 1
 
 class WebSocketHandler {
   private createSocketAccept(id: string): string {
@@ -42,7 +44,7 @@ class WebSocketHandler {
     return finalBuffer;
   }
 
-  private readableSocket(socket: internal.Duplex) {
+  private readableSocket(socket: internal.Duplex): string {
     socket.read(1);
 
     const [markerAndPayloadLength] = socket.read(1);
@@ -65,8 +67,45 @@ class WebSocketHandler {
     const decoded = this.unmask(encoded, maskKey);
     const received = decoded.toString('utf8');
 
-    const data = JSON.parse(received);
-    console.log('Message:', data);
+    return received;
+  }
+
+  public concat(bufferList, totalLength) {
+    const target = Buffer.allocUnsafe(totalLength);
+    let offset = 0;
+    for (const buffer of bufferList) {
+      target.set(buffer, offset);
+      offset += buffer.length;
+    }
+
+    return target;
+  }
+
+  public sendMessage(message: string, socket: internal.Duplex) {
+    const msg = Buffer.from(message);
+    const messageSize = msg.length;
+
+    let dataFrameBuffer: Buffer;
+
+    const firstByte = 0x80 | OPCODE_TEXT;
+    if (messageSize <= SEVEN_BITS_INTEGER_MARKER) {
+      const bytes = [firstByte];
+      dataFrameBuffer = Buffer.from(bytes.concat(messageSize));
+    } else if (messageSize <= MAXIMUM_SIXTEEN_BITS_INTEGER) {
+      const offsetFourBytes = 4;
+      const target = Buffer.allocUnsafe(offsetFourBytes);
+      target[0] = firstByte;
+      target[1] = SIXTEEN_BITS_INTEGER_MARKER | 0x0;
+
+      target.writeUint16BE(messageSize, 2);
+      dataFrameBuffer = target;
+    } else {
+      throw new Error('message too long buddy :( ');
+    }
+    const totalLength = dataFrameBuffer.byteLength + messageSize;
+    const dataFrameResponse = this.concat([dataFrameBuffer, msg], totalLength);
+
+    socket.write(dataFrameResponse);
   }
 
   public upgrade = (req: IncomingMessage, socket: internal.Duplex) => {
@@ -75,7 +114,11 @@ class WebSocketHandler {
     const headers = this.prepareHeaders.bind(this)(webClientSocketKey);
 
     socket.write(headers);
-    socket.on('readable', () => this.readableSocket(socket));
+
+    socket.on('readable', () => {
+      const messageString = this.readableSocket(socket);
+      this.sendMessage(messageString, socket);
+    });
   };
 }
 

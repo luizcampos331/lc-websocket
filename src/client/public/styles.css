@@ -39,7 +39,6 @@ main {
   #messages {
     display: flex;
     flex-direction: column;
-    gap: 20px;
     width: 600px;
     padding: 20px;
     box-shadow: 0px 0px 3px 0px rgba(0,0,0,0.75) inset;

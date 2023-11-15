@@ -33,8 +33,31 @@ function websocketHandler() {
     });
   };
 
+  const messages = document.getElementById('messages');
+
   socket.onmessage = message => {
-    console.log('message', message);
+    const formattedMessage = JSON.stringify(JSON.parse(message.data), null, 2);
+
+    if (!messages.innerHTML.includes('[')) {
+      const formattedString = `[\n  ${formattedMessage.replace(
+        /\n/g,
+        '\n  ',
+      )}\n]`;
+      messages.innerHTML = `<pre>${formattedString}</pre>`;
+    } else {
+      const currentContent = messages.textContent;
+      const lastIndex = currentContent.lastIndexOf(']');
+
+      const contentWithoutLastComma = currentContent
+        .slice(0, lastIndex)
+        .trimEnd();
+
+      const newContent = `${contentWithoutLastComma},\n  ${formattedMessage.replace(
+        /\n/g,
+        '\n  ',
+      )}\n]`;
+      messages.innerHTML = `<pre>${newContent}</pre>`;
+    }
   };
 
   socket.onerror = error => console.error(`WebSocket error:`, error);
