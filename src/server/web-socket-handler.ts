@@ -58,7 +58,7 @@ class WebSocketHandler {
       messageLength = socket.read(2).readUint16BE(0);
     } else {
       throw new Error(
-        `your message is too long! we don't handle 64-bit messages`,
+        `Your message is too long! we don't read 64-bit messages`,
       );
     }
 
@@ -70,7 +70,7 @@ class WebSocketHandler {
     return received;
   }
 
-  public concat(bufferList, totalLength) {
+  public concat(bufferList: Buffer[], totalLength: number) {
     const target = Buffer.allocUnsafe(totalLength);
     let offset = 0;
     for (const buffer of bufferList) {
@@ -100,7 +100,9 @@ class WebSocketHandler {
       target.writeUint16BE(messageSize, 2);
       dataFrameBuffer = target;
     } else {
-      throw new Error('message too long buddy :( ');
+      throw new Error(
+        `Your message is too long! we don't write 64-bit messages`,
+      );
     }
     const totalLength = dataFrameBuffer.byteLength + messageSize;
     const dataFrameResponse = this.concat([dataFrameBuffer, msg], totalLength);
@@ -111,7 +113,7 @@ class WebSocketHandler {
   public upgrade = (req: IncomingMessage, socket: internal.Duplex) => {
     const { 'sec-websocket-key': webClientSocketKey } = req.headers;
 
-    const headers = this.prepareHeaders.bind(this)(webClientSocketKey);
+    const headers = this.prepareHeaders(webClientSocketKey);
 
     socket.write(headers);
 
