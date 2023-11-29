@@ -1,6 +1,8 @@
 import { IncomingMessage } from 'http';
-import crypto from 'node:crypto';
 import internal from 'stream';
+import concatBuffer from 'utils/concat-buffer';
+import prepareHeaders from 'utils/prepare-headers';
+import unmask from 'utils/unmask';
 
 const SEVEN_BITS_INTEGER_MARKER = 125;
 const SIXTEEN_BITS_INTEGER_MARKER = 126;
@@ -10,78 +12,60 @@ const MAXIMUM_SIXTEEN_BITS_INTEGER = 2 ** 16; // 0 to 65536
 const OPCODE_TEXT = 0x01; // 1 bit in binary 1
 
 class WebSocketHandler {
-  private createSocketAccept(id: string): string {
-    const sha1 = crypto.createHash('sha1');
-    sha1.update(id + process.env.WEBSOCKET_MAGIC_STRING_KEY);
-
-    return sha1.digest('base64');
-  }
-
-  private prepareHeaders(id: string): string {
-    const acceptKey = this.createSocketAccept(id);
-
-    const headers = [
-      'HTTP/1.1 101 Switching Protocols',
-      'Upgrade: websocket',
-      'Connection: Upgrade',
-      `Sec-WebSocket-Accept: ${acceptKey}`,
-      '',
-    ]
-      .map(line => line.concat('\r\n'))
-      .join('');
-
-    return headers;
-  }
-
-  private unmask(encodedBuffer: Buffer, maskKey: Buffer) {
-    const finalBuffer = Buffer.from(encodedBuffer);
-
-    for (let index = 0; index < encodedBuffer.length; index++) {
-      finalBuffer[index] =
-        encodedBuffer[index] ^ maskKey[index % MASK_KEY_BYTES_LENGTH];
-    }
-
-    return finalBuffer;
-  }
+  private buffer: Buffer = Buffer.alloc(0);
 
   private readableSocket(socket: internal.Duplex): string {
-    socket.read(1);
+    let received = '';
 
-    const [markerAndPayloadLength] = socket.read(1);
-    const lengthIndicatorInBits = markerAndPayloadLength - FIRST_BIT;
+    const chunk = socket.read();
+
+    this.buffer = Buffer.concat([this.buffer, chunk]);
+
+    if (this.buffer.length < 2) {
+      throw new Error('Insufficient data to read message');
+    }
+
+    const lengthIndicatorInBits = this.buffer.readUInt8(1) - FIRST_BIT;
 
     let messageLength = 0;
+    let dataOffset = 0;
 
     if (lengthIndicatorInBits <= SEVEN_BITS_INTEGER_MARKER) {
       messageLength = lengthIndicatorInBits;
+      dataOffset = 2;
     } else if (lengthIndicatorInBits === SIXTEEN_BITS_INTEGER_MARKER) {
-      messageLength = socket.read(2).readUint16BE(0);
+      messageLength = this.buffer.readUInt16BE(2);
+      dataOffset = 4;
     } else {
       throw new Error(
         `Your message is too long! we don't read 64-bit messages`,
       );
     }
 
-    const maskKey = socket.read(MASK_KEY_BYTES_LENGTH);
-    const encoded = socket.read(messageLength);
-    const decoded = this.unmask(encoded, maskKey);
-    const received = decoded.toString('utf8');
+    const maskingKey = this.buffer.subarray(
+      dataOffset,
+      dataOffset + MASK_KEY_BYTES_LENGTH,
+    );
+
+    const messageOffset = dataOffset + MASK_KEY_BYTES_LENGTH;
+
+    if (this.buffer.length >= messageOffset + messageLength) {
+      const encoded: Buffer = this.buffer.subarray(
+        messageOffset,
+        messageOffset + messageLength,
+      );
+
+      const decoded = unmask(MASK_KEY_BYTES_LENGTH, encoded, maskingKey);
+
+      received = decoded.toString('utf8');
+
+      this.buffer = this.buffer.subarray(messageOffset + messageLength);
+    }
 
     return received;
   }
 
-  public concat(bufferList: Buffer[], totalLength: number) {
-    const target = Buffer.allocUnsafe(totalLength);
-    let offset = 0;
-    for (const buffer of bufferList) {
-      target.set(buffer, offset);
-      offset += buffer.length;
-    }
-
-    return target;
-  }
-
-  public sendMessage(message: string, socket: internal.Duplex) {
+  private sendMessage(message: string, socket: internal.Duplex) {
     const msg = Buffer.from(message);
     const messageSize = msg.length;
 
@@ -105,7 +89,7 @@ class WebSocketHandler {
       );
     }
     const totalLength = dataFrameBuffer.byteLength + messageSize;
-    const dataFrameResponse = this.concat([dataFrameBuffer, msg], totalLength);
+    const dataFrameResponse = concatBuffer([dataFrameBuffer, msg], totalLength);
 
     socket.write(dataFrameResponse);
   }
@@ -113,13 +97,16 @@ class WebSocketHandler {
   public upgrade = (req: IncomingMessage, socket: internal.Duplex) => {
     const { 'sec-websocket-key': webClientSocketKey } = req.headers;
 
-    const headers = this.prepareHeaders(webClientSocketKey);
+    const headers = prepareHeaders(webClientSocketKey);
 
     socket.write(headers);
 
     socket.on('readable', () => {
-      const messageString = this.readableSocket(socket);
-      this.sendMessage(messageString, socket);
+      const received = this.readableSocket(socket);
+
+      if (received) {
+        this.sendMessage(received, socket);
+      }
     });
   };
 }
