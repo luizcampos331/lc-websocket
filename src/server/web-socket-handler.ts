@@ -6,9 +6,10 @@ import unmask from 'utils/unmask';
 
 const SEVEN_BITS_INTEGER_MARKER = 125;
 const SIXTEEN_BITS_INTEGER_MARKER = 126;
+
 const MASK_KEY_BYTES_LENGTH = 4;
 const FIRST_BIT = 128; // parseInt('10000000', 2)
-const MAXIMUM_SIXTEEN_BITS_INTEGER = 2 ** 16; // 0 to 65536
+const MAXIMUM_SIXTEEN_BITS_INTEGER = 2 ** 16; // 0 to 65536 -> start 64-bits
 const OPCODE_TEXT = 0x01; // 1 bit in binary 1
 
 class WebSocketHandler {
@@ -37,9 +38,8 @@ class WebSocketHandler {
       messageLength = this.buffer.readUInt16BE(2);
       dataOffset = 4;
     } else {
-      throw new Error(
-        `Your message is too long! we don't read 64-bit messages`,
-      );
+      messageLength = Number(this.buffer.readBigUint64BE(2));
+      dataOffset = 10;
     }
 
     const maskingKey = this.buffer.subarray(
@@ -72,10 +72,11 @@ class WebSocketHandler {
     let dataFrameBuffer: Buffer;
 
     const firstByte = 0x80 | OPCODE_TEXT;
+
     if (messageSize <= SEVEN_BITS_INTEGER_MARKER) {
       const bytes = [firstByte];
       dataFrameBuffer = Buffer.from(bytes.concat(messageSize));
-    } else if (messageSize <= MAXIMUM_SIXTEEN_BITS_INTEGER) {
+    } else if (messageSize < MAXIMUM_SIXTEEN_BITS_INTEGER) {
       const offsetFourBytes = 4;
       const target = Buffer.allocUnsafe(offsetFourBytes);
       target[0] = firstByte;
