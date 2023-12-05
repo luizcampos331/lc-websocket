@@ -6,6 +6,7 @@ import unmask from 'utils/unmask';
 
 const SEVEN_BITS_INTEGER_MARKER = 125;
 const SIXTEEN_BITS_INTEGER_MARKER = 126;
+const SIXTY_FOUR_BITS_INTEGER_MARKER = 127;
 
 const MASK_KEY_BYTES_LENGTH = 4;
 const FIRST_BIT = 128; // parseInt('10000000', 2)
@@ -85,9 +86,13 @@ class WebSocketHandler {
       target.writeUint16BE(messageSize, 2);
       dataFrameBuffer = target;
     } else {
-      throw new Error(
-        `Your message is too long! we don't write 64-bit messages`,
-      );
+      const offsetTenBytes = 10;
+      const target = Buffer.allocUnsafe(offsetTenBytes);
+      target[0] = firstByte;
+      target[1] = SIXTY_FOUR_BITS_INTEGER_MARKER | 0x0;
+
+      target.writeBigUInt64BE(BigInt(messageSize), 2);
+      dataFrameBuffer = target;
     }
     const totalLength = dataFrameBuffer.byteLength + messageSize;
     const dataFrameResponse = concatBuffer([dataFrameBuffer, msg], totalLength);

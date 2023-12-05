@@ -22,21 +22,9 @@ function sendMessage(socket) {
   });
 }
 
-function websocketHandler() {
-  const socket = new WebSocket('_SERVER_URL_');
-
-  socket.onopen = () => {
-    console.info('Connected');
-
-    waitLoadDOM(() => {
-      sendMessage(socket);
-    });
-  };
-
-  const messages = document.getElementById('messages');
-
-  socket.onmessage = message => {
-    const formattedMessage = JSON.stringify(JSON.parse(message.data), null, 2);
+function receiveMessage(message, messages) {
+  try {
+    const formattedMessage = JSON.stringify(JSON.parse(message), null, 2);
 
     if (!messages.innerHTML.includes('[')) {
       const formattedString = `[\n  ${formattedMessage.replace(
@@ -57,6 +45,34 @@ function websocketHandler() {
         '\n  ',
       )}\n]`;
       messages.innerHTML = `<pre>${newContent}</pre>`;
+    }
+
+    return '';
+  } catch (error) {
+    return message;
+  }
+}
+
+function websocketHandler() {
+  const socket = new WebSocket('_SERVER_URL_');
+
+  socket.onopen = () => {
+    console.info('Connected');
+
+    waitLoadDOM(() => {
+      sendMessage(socket);
+    });
+  };
+
+  const messages = document.getElementById('messages');
+
+  let chunkMessage = '';
+
+  socket.onmessage = message => {
+    if (chunkMessage) {
+      chunkMessage = receiveMessage(chunkMessage + message.data, messages);
+    } else {
+      chunkMessage = receiveMessage(message.data, messages);
     }
   };
 
