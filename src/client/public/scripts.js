@@ -1,8 +1,10 @@
+let socket;
+
 function waitLoadDOM(callback) {
   document.addEventListener('DOMContentLoaded', callback());
 }
 
-function sendMessage(socket) {
+function sendMessage() {
   const form = document.getElementById('form');
 
   form.addEventListener('submit', event => {
@@ -53,11 +55,28 @@ function receiveMessage(message, messages) {
   }
 }
 
-function websocketHandler() {
-  const socket = new WebSocket('_SERVER_URL_');
+function connectServer() {
+  socket = new WebSocket('_SERVER_URL_');
+}
+
+function reconnectServer() {
+  connectServer();
+
+  socket.onerror = error => {
+    console.error('WebSocket error during reconnection:', error);
+    setTimeout(reconnectServer, 3000);
+  };
 
   socket.onopen = () => {
-    console.info('Connected');
+    console.info('WebSocket server is reconnected');
+
+    listeners();
+  };
+}
+
+function listeners() {
+  socket.onopen = () => {
+    console.info('WebSocket server is connected');
 
     waitLoadDOM(() => {
       sendMessage(socket);
@@ -76,8 +95,18 @@ function websocketHandler() {
     }
   };
 
-  socket.onerror = error => console.error(`WebSocket error:`, error);
-  socket.onclose = () => console.info('Disconnected from WebSocket server');
+  socket.onerror = error => console.error(`WebSocket server error:`, error);
+
+  socket.onclose = () => {
+    console.info('Disconnected from WebSocket server');
+
+    reconnectServer();
+  };
 }
 
-websocketHandler();
+function webSocketHandler() {
+  connectServer();
+  listeners();
+}
+
+webSocketHandler();
